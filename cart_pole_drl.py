@@ -37,12 +37,13 @@ W2 = tf.get_variable("W2", shape=[H, 1],
 score = tf.matmul(layer1, W2)
 probability = tf.nn.sigmoid(score)
 
+# fix a bug of missing tvars define
+tvars = tf.trainable_variables()
 adam = tf.train.AdamOptimizer(learning_rate=learning_rate)
 W1Grad = tf.placeholder(tf.float32, name="batch_grad1")
 W2Grad = tf.placeholder(tf.float32, name="batch_grad2")
 batchGrad = [W1Grad, W2Grad]
-# fix a bug of missing tvars define
-tvars = tf.trainable_variables()
+# dos apply_gradients bind the batchGrad to the network?
 updateGrads = adam.apply_gradients(zip(batchGrad, tvars))
 
 def discount_reward(r):
@@ -58,7 +59,6 @@ advantages = tf.placeholder(tf.float32, name="reward_signal")
 loglik = tf.log(input_y *(input_y - probability) + (1-input_y)*(input_y + probability))
 loss = -tf.reduce_mean(loglik * advantages)
 
-tvars = tf.trainable_variables()
 newGrads = tf.gradients(loss, tvars)
 
 xs, ys, drs = [], [], []
@@ -78,8 +78,10 @@ with tf.Session() as sess:
         gradBuffer[ix] = grad * 0
 
 
+    cnt = 0
     while episode_number <= total_episodes:
-        if reward_sum/batch_size > 100 or rendering == True:
+        # do not render util average reward is greater than 180
+        if reward_sum / batch_size > 180 or rendering:
             env.render()
             rendering = True
 
@@ -92,20 +94,48 @@ with tf.Session() as sess:
 
         observation, reward, done, info = env.step(action)
         reward_sum += reward
+        if reward == 1.0 :
+            cnt += 1
         drs.append(reward)
 
         if done:
+            if cnt >= 200.00:
+                print("episode_num:", episode_number, " perfect ", cnt)
+            elif rendering:
+                print("episode_num:", episode_number, " cnt:", cnt);
+            cnt = 0
             episode_number += 1
             epx = np.vstack(xs)
             epy = np.vstack(ys)
             epr = np.vstack(drs)
             xs, ys, drs = [], [], []
 
-            discounted_err = discount_rewards(epr)
-            discounted_err = 1 / discount_reward(epr)
+            discounted_err = discount_reward(epr)
+            discounted_err -= np.mean(discounted_err)
+            discounted_err /= np.std(discounted_err);
 
+            # 求解梯度
+            tGrad = sess.run(newGrads, feed_dict={observations: epx,
+                                                  input_y: epy,
+                                                  advantages: discounted_err})
 
+            for ix, grad in enumerate(tGrad):
+                gradBuffer[ix] += grad
 
+            if episode_number % batch_size == 0:
+                # TODO: how the grad works on the network?
+                sess.run(updateGrads, feed_dict={W1Grad: gradBuffer[0], W2Grad: gradBuffer[1]})
+                # clean gradBuffer
+                for ix, grad in enumerate(gradBuffer):
+                    gradBuffer[ix] = grad * 0
 
-
+                # show the experiment's num and average reward
+                print('Average reward for episode %d : %f.' % (episode_number, reward_sum /
+                    batch_size))
+                if reward_sum / batch_size >=300.00:
+                    print("Task solved in", episode_number, 'episodes!')
+                    break
+                reward_sum = 0
+            # reset the env
+            observation = env.reset()
 
