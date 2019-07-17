@@ -1,12 +1,19 @@
 # please see the latest api document
 # https://scikit-image.org/docs/stable/api/
-from skimage import io, transform, data, data_dir, color
+from skimage import io, transform, data, data_dir, color, exposure, img_as_float
 import matplotlib.pyplot as plt
 import numpy as np
+import os
+
+
+
+########################## test 10 ############################
+exit()
+
 
 ########################## test 1 ############################
 img = io.imread('./robin.jpg')
-io.imshow(img)
+plt.imshow(img)
 # use matplotlib to show image on mac
 plt.show()
 # please close the window to continue
@@ -27,7 +34,7 @@ print("image average pixel value is:", img.mean())
 print("image pixel value of [0][0] is:", img[0][0]) 
 # show the red single channel image
 red_img = img[:,:,0]
-io.imshow(red_img)
+io.imshow(red_img) # different kind of show image method
 plt.show()
 
 ########################## test 2 ############################
@@ -119,4 +126,162 @@ img_coffee_hsv = color.convert_colorspace(img_coffee, 'RGB', 'HSV')
 io.imshow(img_coffee_hsv)
 plt.show()
 
+
+########################## test 5 ############################
+img_ast = data.astronaut()
+# figure, num means id, retrieve it and active it or create a new
+plt.figure(num='astronaut', figsize=(8, 8))
+# split the window to 4 sub windows
+# subplot(nrows, ncols, index, **kwargs)
+plt.subplot(2, 2, 1)
+plt.title('origin image')
+plt.imshow(img_ast)
+
+# the second window
+plt.subplot(2, 2, 2)
+plt.title('R channel')
+# TODO:why gray?
+plt.imshow(img_ast[:,:,0], plt.cm.gray)
+plt.axis('off') # display the axis
+
+# the third window
+plt.subplot(2, 2, 3)
+plt.title('G channel')
+plt.imshow(img_ast[:,:,1], plt.cm.gray)
+plt.axis('off')
+
+# the fourth window
+plt.subplot(2, 2, 4)
+plt.title('B channel')
+plt.imshow(img_ast[:,:,2], plt.cm.gray)
+plt.axis('off')
+
+plt.show()
+
+
+########################## test 6 ############################
+def convert_gray(f):
+    rgb = io.imread(f)
+    gray = color.rgb2gray(rgb)
+    print("fname is:%s, shape is:%s, gray shape is:%s" % (f, rgb.shape, gray.shape))
+    dst = transform.resize(gray, (256, 256))
+    return dst
+input_path = data_dir + '/*.png'
+coll = io.ImageCollection(input_path, load_func=convert_gray)
+output_path = "./output"
+if not os.path.exists(output_path):
+    os.makedirs(output_path)
+for i in range(len(coll)):
+    io.imsave(output_path + '/' + np.str(i) + '.jpg', coll[i])
+
+print("has %d images" % len(coll))
+io.imshow(coll[10])
+# TODO: the window behave is strange
+plt.figure(num='collection')
+plt.subplot(1, 2, 1)
+plt.title('pic 10')
+plt.imshow(coll[10])
+
+plt.subplot(1, 2, 2)
+plt.title('pic 11')
+plt.imshow(coll[11])
+
+plt.show()
+
+
+########################## test 7 ############################
+img = data.camera()
+# resize
+dst = transform.resize(img, (80, 60))
+plt.figure('resize shape')
+plt.subplot(321)
+plt.title('before resize, shape:' + str(img.shape))
+plt.imshow(img)
+plt.subplot(322)
+plt.title('after resize, shape:' + str(dst.shape))
+plt.imshow(dst, plt.cm.gray)
+
+# rescale
+dst_rescale1 = transform.rescale(img, 0.1)
+plt.subplot(323)
+plt.title('after rescale, shape:' + str(dst_rescale1.shape))
+plt.imshow(dst_rescale1, plt.cm.gray)
+dst_rescale2 = transform.rescale(img, [1, 2])
+plt.subplot(324)
+plt.title('after rescale, shape:' + str(dst_rescale2.shape))
+plt.imshow(dst_rescale2, plt.cm.gray)
+
+# rotate
+dst_rotate1 = transform.rotate(img, 60)
+plt.subplot(325)
+plt.title('after rotate 60, shape:' + str(dst_rotate1.shape))
+plt.imshow(dst_rotate1)
+# the image will be big enough to contain the rotated image
+dst_rotate2 = transform.rotate(img, 30, resize=True)
+plt.subplot(326)
+plt.title('after rotate 60, shape:' + str(dst_rotate2.shape))
+plt.imshow(dst_rotate2, plt.cm.gray)
+
+plt.show()
+
+
+########################## test 8 ############################
+img = data.astronaut()
+rows, cols, dim = img.shape
+print(img.shape, img.dtype.name)
+# warning: the img.dtype.name is np.uint8, so the composite_image must
+#          has the same dtype
+pyramid = tuple(transform.pyramid_gaussian(img, downscale=2))
+composite_image = np.ones((rows, cols + cols // 2, 3), dtype=np.float)
+# composite the original img
+composite_image[0:rows, 0:cols] = pyramid[0]
+
+# composite the other images
+i_row = 0
+for p in pyramid[1:]:
+    print("shape of p is:", p.shape)
+    n_rows, n_cols = p.shape[:2]
+    composite_image[i_row:i_row + n_rows, cols:cols + n_cols] = p
+    i_row += n_rows
+
+plt.imshow(composite_image)
+plt.show()
+
+########################## test 9 ############################
+# note: data.moon() dtype is uint8
+img = img_as_float(data.astronaut()) # function img_as_float is useful, see test 8
+print("img shape:", img.shape)
+print("img mean:", img.mean())
+
+plt.figure(num="exposure", figsize=(8,8))
+plt.subplot(4, 4, 1)
+plt.title("original img")
+plt.axis('off')
+plt.imshow(img)
+for i in range(2, 17):
+    gam = exposure.adjust_gamma(img, 0.2 * i)
+    plt.subplot(4, 4, i)
+    plt.title("gamma " + str(0.2 * i)[:4])
+    plt.axis('off')
+    plt.imshow(gam)
+plt.show()
+
+plt.figure(num="exposure")
+plt.subplot(4, 4, 1)
+plt.title("original img")
+plt.axis('off')
+plt.imshow(img)
+scale=[0, 0, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 1.0]
+for i in range(2, 17):
+    gam = exposure.rescale_intensity(img, in_range=(0, scale[i]))
+    plt.subplot(4, 4, i)
+    plt.title("inten:" + str(scale[i]) + " mean:" + str(gam.mean())[:4])
+    plt.axis('off')
+    plt.imshow(gam)
+plt.show()
+
+# use *1.0 to change the uint8 dtype to float
+img = np.array([51, 102, 153], dtype=np.uint8)
+mat = exposure.rescale_intensity(img*1.0)
+print(mat) # [0. 0.5 1.]
 
