@@ -5,12 +5,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
-
-
-########################## test 10 ############################
-exit()
-
-
 ########################## test 1 ############################
 img = io.imread('./robin.jpg')
 plt.imshow(img)
@@ -284,4 +278,66 @@ plt.show()
 img = np.array([51, 102, 153], dtype=np.uint8)
 mat = exposure.rescale_intensity(img*1.0)
 print(mat) # [0. 0.5 1.]
+
+
+########################## test 10 ############################
+img = data.camera()
+plt.figure("histogram")
+arr = img.flatten()
+"""
+ input:
+   arr: 灰度图，把二维图像转化为一维
+   bins:直方图的桶数
+   density:是否归一化，如果归一化，最终直方图的面积为1
+          否则为像素点个数，即图像size
+
+ output:
+   n: 直方图向量，各个灰度的像素个数
+   bins: range of each bin
+   patches: the data list in each bin
+"""
+n, bins, patches = plt.hist(arr, bins=256, facecolor='red', density=1)
+print(n)
+print("sum of n is:%d, size of image is:%d" % (n.sum(), img.size))
+print(bins.shape)
+for i in range(0, min(10, len(bins))):
+    print(bins[i])
+
+for i in range(0, min(10, len(patches))):
+    print(patches[i])
+plt.show()
+
+# colored histogram
+img = data.astronaut()
+ar = img[:,:,0].flatten()
+plt.hist(ar, bins=256, facecolor='red', density=1)
+ag = img[:,:,1].flatten()
+plt.hist(ag, bins=256, facecolor='green', density=1)
+ab = img[:,:,2].flatten()
+plt.hist(ab, bins=256, facecolor='blue', density=1)
+plt.show()
+
+########################## test 11 ############################
+img = data.moon()
+plt.figure(num="moon")
+plt.subplot(221)
+plt.title('original moon')
+plt.imshow(img)
+plt.subplot(222)
+plt.title('original hist')
+n, _, _ = plt.hist(img.flatten(), bins=256, facecolor='red', density=1)
+print('img size:%d, sum of n:%d' % (img.size, n.sum()))
+
+# 直方图均衡化
+img_equ = exposure.equalize_hist(img)
+plt.subplot(223)
+plt.title('equalize moon')
+plt.imshow(img_equ)
+plt.subplot(224)
+plt.title('equalize hist')
+n_equ, _, _ = plt.hist(img_equ.flatten(), bins=256, facecolor='red', density=1)
+# TODO: 为什么n_equ.sum()不等于1了呢？
+print('equalize img size:%d, sum of n:%d' % (img_equ.size, n_equ.sum()))
+
+plt.show()
 
