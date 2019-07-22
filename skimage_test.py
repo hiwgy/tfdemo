@@ -91,7 +91,7 @@ def test3():
     print("img1_fix_flag shape is:", img1_fix_flag.shape)
     # the img1_fix_flag is [180,180,3], value is True or False
     # so need to change is shape
-    raw_pad = np.zeros([10, 380, 3], dtype=np.bool)
+    raw_pad = np.zeros([10, 180, 3], dtype=np.bool)
     col_pad = np.zeros([200, 10, 3], dtype=np.bool)
     pad_ret = np.vstack([raw_pad, img1_fix_flag])
     pad_ret = np.vstack([pad_ret, raw_pad])
